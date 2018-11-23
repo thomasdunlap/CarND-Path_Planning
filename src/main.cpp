@@ -270,6 +270,7 @@ int main() {
               ptsx.push_back(prev_car_x);
               ptsy.push_back(prev_car_y);
             }
+
             else
             {
               ref_x = previous_path_x[prev_size-1];
