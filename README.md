@@ -1,6 +1,8 @@
 # CarND-Path-Planning-Project
 Self-Driving Car Engineer Nanodegree Program
 
+![Car Changing lanes](./output/change_lanes.png)
+
 ##### Goals
 * Create interpolated waypoints
 * Make predictions from sensor fusion output
