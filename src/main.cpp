@@ -207,8 +207,8 @@ int main() {
   // reference velocity to keep from going over speed limit (limit is 50)
   double ref_vel = 49.5;
 
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+  h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,
+    &map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -244,12 +244,12 @@ int main() {
           	// Sensor Fusion Data, a list of all other cars on the same side of the road.
           	auto sensor_fusion = j[1]["sensor_fusion"];
 
-            int prev_size = previous_path_x.size()
+            int prev_size = previous_path_x.size();
 
           	json msgJson;
 
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
+          	//vector<double> next_x_vals;
+          	//vector<double> next_y_vals;
 
 
             std::vector<double> ptsx;
@@ -261,6 +261,7 @@ int main() {
             double ref_y = car_y;
             double ref_yaw = deg2rad(car_yaw);
 
+            // gives car starting points if prev_size doesn't exist or too low
             if(prev_size < 2)
             {
               // two points make path tangent to car
@@ -268,9 +269,11 @@ int main() {
               double prev_car_y = car_y - sin(car_yaw);
 
               ptsx.push_back(prev_car_x);
-              ptsy.push_back(prev_car_y);
-            }
+              ptsx.push_back(car_x);
 
+              ptsy.push_back(prev_car_y);
+              ptsy.push_back(car_y);
+            }
             else
             {
               ref_x = previous_path_x[prev_size-1];
@@ -285,19 +288,65 @@ int main() {
               ptsy.push_back(ref_y_prev);
               ptsy.push_back(ref_y);
             }
+            //Evenly spaced 30m points from starting reference
+            std::vector<double> next_wp0 = getXY(car_s+30, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            std::vector<double> next_wp1 = getXY(car_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
+            std::vector<double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
-
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-            double dist_inc = 0.5;
-            for(int i = 0; i < 50; i++)
+            for(int i = 0; i < ptsx.size(); i++)
             {
-                  double next_s = car_s+(i+1)*dist_inc;
-                  double next_d = 10;
-                  std::vector<double> xy = getXY(next_s, next_d, map_waypoints_s,
-                                                  map_waypoints_x, map_waypoints_y);
+              // shift reference angle to zero degrees
+              double shift_x = ptsx[i]-ref_x;
+              double shift_y = ptsy[i]-ref_y;
 
-                  next_x_vals.push_back(xy[0]);
-                  next_y_vals.push_back(xy[1]);
+              ptsx[i] = (shift_x * cos(0-ref_yaw) - shift_y*sin(0-ref_yaw));
+              ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y*cos(0-ref_yaw));
+            }
+
+            tk::spline s;
+
+            s.set_points(ptsx, ptsy);
+
+            std::vector<double> next_x_vals;
+            std::vector<double> next_y_vals;
+
+            for(int i = 0; i < previous_path_x.size(); i++) {
+              next_x_vals.push_back(previous_path_x[i]);
+              next_y_vals.push_back(previous_path_y[i]);
+            }
+
+            double target_x = 30.0;
+            double target_y = s(target_x);
+            double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
+
+            double x_add_on = 0;
+          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+            double dist_inc = 0.3;
+            for(int i = 0; i <= 50-previous_path_x.size(); i++)
+            {
+                  double N = (target_dist/(.02*ref_vel/2.24));
+                  double x_point = x_add_on + (target_x)/N;
+                  double y_point = s(x_point);
+
+                  x_add_on = x_point;
+
+                  double x_ref = x_point;
+                  double y_ref = y_point;
+
+                  x_point = (x_ref * cos(ref_yaw)-y_ref*sin(ref_yaw));
+                  y_point = (x_ref * sin(ref_yaw)+y_ref*cos(ref_yaw));
+
+                  x_point += ref_x;
+                  y_point += ref_y;
+
+                  //double next_s = car_s+(i+1)*dist_inc;
+                  //double next_d = 10;
+                  //std::vector<double> xy = getXY(next_s, next_d, map_waypoints_s,  map_waypoints_x, map_waypoints_y);
+
+                  next_x_vals.push_back(x_point);
+                  next_y_vals.push_back(y_point);
+                  //next_x_vals.push_back(xy[0]);
+                  //next_y_vals.push_back(xy[1]);
                   //next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
                   //next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
             }
