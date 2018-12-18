@@ -274,8 +274,10 @@ int main() {
               ptsy.push_back(prev_car_y);
               ptsy.push_back(car_y);
             }
+            // use the previous path's end point as starting reference
             else
             {
+              // Redefine reference state as previous path end point
               ref_x = previous_path_x[prev_size-1];
               ref_y = previous_path_y[prev_size-1];
 
@@ -283,6 +285,7 @@ int main() {
               double ref_y_prev = previous_path_y[prev_size-2];
               ref_yaw = atan2(ref_y-ref_y_prev, ref_x-ref_x_prev);
 
+              // Use two points that make the path tangent to the previous path's point
               ptsx.push_back(ref_x_prev);
               ptsx.push_back(ref_x);
               ptsy.push_back(ref_y_prev);
@@ -293,6 +296,14 @@ int main() {
             std::vector<double> next_wp1 = getXY(car_s+60, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
             std::vector<double> next_wp2 = getXY(car_s+90, (2+4*lane), map_waypoints_s, map_waypoints_x, map_waypoints_y);
 
+            ptsx.push_back(next_wp0[0]);
+            ptsx.push_back(next_wp1[0]);
+            ptsx.push_back(next_wp2[0]);
+
+            ptsy.push_back(next_wp0[1]);
+            ptsy.push_back(next_wp1[1]);
+            ptsy.push_back(next_wp2[1]);
+
             for(int i = 0; i < ptsx.size(); i++)
             {
               // shift reference angle to zero degrees
@@ -302,9 +313,10 @@ int main() {
               ptsx[i] = (shift_x * cos(0-ref_yaw) - shift_y*sin(0-ref_yaw));
               ptsy[i] = (shift_x * sin(0-ref_yaw) + shift_y*cos(0-ref_yaw));
             }
-
+            // create a spline
             tk::spline s;
 
+            // set (x,y) points to the spline
             s.set_points(ptsx, ptsy);
 
             std::vector<double> next_x_vals;
