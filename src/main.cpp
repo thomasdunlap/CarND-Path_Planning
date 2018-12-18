@@ -319,14 +319,17 @@ int main() {
             // set (x,y) points to the spline
             s.set_points(ptsx, ptsy);
 
+            //  Define the actual (x,y) points we will use for the planner
             std::vector<double> next_x_vals;
             std::vector<double> next_y_vals;
 
-            for(int i = 0; i < previous_path_x.size(); i++) {
+
+            for(int i = 0; i < previous_path_x.size(); i++)
+            {
               next_x_vals.push_back(previous_path_x[i]);
               next_y_vals.push_back(previous_path_y[i]);
             }
-
+            // Calculate how to break up spline points so that we travel at our desired reference velocity
             double target_x = 30.0;
             double target_y = s(target_x);
             double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
@@ -334,6 +337,8 @@ int main() {
             double x_add_on = 0;
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
             double dist_inc = 0.3;
+
+            // Fill up the rest of our path planner after filling it with previous points, here we will allways output 50 points
             for(int i = 0; i <= 50-previous_path_x.size(); i++)
             {
                   double N = (target_dist/(.02*ref_vel/2.24));
@@ -345,6 +350,7 @@ int main() {
                   double x_ref = x_point;
                   double y_ref = y_point;
 
+                  // rotate back to normal after rotating it earlier
                   x_point = (x_ref * cos(ref_yaw)-y_ref*sin(ref_yaw));
                   y_point = (x_ref * sin(ref_yaw)+y_ref*cos(ref_yaw));
 
