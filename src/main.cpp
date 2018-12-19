@@ -270,11 +270,20 @@ int main() {
                 if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
                 {
                   // Lower ref velocity so we don't impact car in front; could also flag to try to change lanes
-                  ref_vel = 29.5; // mph
-                  //too_close = true;
+                  //ref_vel = 29.5; // mph
+                  too_close = true;
                 }
 
               }
+            }
+
+            if(too_close)
+            {
+              ref_vel -= .224;
+            }
+            else if(ref_vel < 49.5)
+            {
+              ref_vel += .224;
             }
 
           	json msgJson;
