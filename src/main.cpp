@@ -205,11 +205,11 @@ int main() {
   int lane = 1;
 
   // reference velocity to keep from going over speed limit (limit is 50)
-  double ref_vel = 49.5;
+  double ref_vel = 0;
 
   h.onMessage([&ref_vel,&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,
     &map_waypoints_dy, &lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,uWS::OpCode opCode) {
-    // "42" at the start of the message means there's a websocket message event.
+    // "42" at the start ofref_vel the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     //auto sdata = string(data).substr(0, length);
