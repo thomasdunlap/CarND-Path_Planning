@@ -246,6 +246,37 @@ int main() {
 
             int prev_size = previous_path_x.size();
 
+            if(prev_size > 0)
+            {
+              car_s = end_path_s;
+            }
+
+            bool too_close = false;
+
+            //find ref_v to use
+            for(int i=0; i < sensor_fusion.size(); i++)
+            {
+              float d = sensor_fusion[i][6];
+              if(d < (2+4*lane+2) && d > (2+4*lane-2))
+              {
+                double vx = sensor_fusion[i][3];
+                double vy = sensor_fusion[i][4];
+                double check_speed = sqrt(vx*vx+vy*vy);
+                double check_car_s = sensor_fusion[i][5];
+                // if using previous points can project s value out
+                check_car_s += ((double)prev_size*.02*check_speed);
+
+                //check s values greater than mine and s gap
+                if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
+                {
+                  // Lower ref velocity so we don't impact car in front; could also flag to try to change lanes
+                  ref_vel = 29.5; // mph
+                  //too_close = true;
+                }
+
+              }
+            }
+
           	json msgJson;
 
           	//vector<double> next_x_vals;
