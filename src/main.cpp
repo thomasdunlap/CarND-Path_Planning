@@ -251,40 +251,93 @@ int main() {
               car_s = end_path_s;
             }
 
+            bool getting_close = false;
             bool too_close = false;
+            bool way_too_close = false;
+            bool on_left = false;
+            bool on_right = false;
+            int blocked_lane;
 
             //find ref_v to use
             for(int i=0; i < sensor_fusion.size(); i++)
             {
               float d = sensor_fusion[i][6];
-              if(d < (2+4*lane+2) && d > (2+4*lane-2))
+
+                // is it on the same lane we are
+              if ( d > 0 && d < 4 )
               {
-                double vx = sensor_fusion[i][3];
-                double vy = sensor_fusion[i][4];
-                double check_speed = sqrt(vx*vx+vy*vy);
-                double check_car_s = sensor_fusion[i][5];
-                // if using previous points can project s value out
-                check_car_s += ((double)prev_size*.02*check_speed);
+                blocked_lane = 0;
+              }
+              else if ( d > 4 && d < 8 )
+              {
+                blocked_lane = 1;
+              }
+              else if ( d > 8 && d < 12 )
+              {
+                blocked_lane = 2;
+              }
+              else
+              {
+                blocked_lane = -1;
+              }
 
-                //check s values greater than mine and s gap
-                if((check_car_s > car_s) && ((check_car_s-car_s) < 30))
-                {
-                  // Lower ref velocity so we don't impact car in front; could also flag to try to change lanes
-                  //ref_vel = 29.5; // mph
-                  too_close = true;
-                }
+              double vx = sensor_fusion[i][3];
+              double vy = sensor_fusion[i][4];
+              double check_speed = sqrt(vx*vx+vy*vy);
+              double check_car_s = sensor_fusion[i][5];
+              // if using previous points can project s value out
+              check_car_s += ((double)prev_size*.02*check_speed);
 
+              //check s values greater than mine and s gap
+              if ( blocked_lane == lane )
+              {
+                // Car in our lane.
+                getting_close |= check_car_s > car_s && check_car_s - car_s < 40;
+                too_close |= check_car_s > car_s && check_car_s - car_s < 30;
+                way_too_close |= check_car_s > car_s && check_car_s - car_s < 20;
+              }
+              else if (blocked_lane - lane == -1 )
+              {
+                // blocked by car in left lone
+                on_left |= car_s - 10 < check_car_s && car_s + 30 > check_car_s;
+              }
+              else if (blocked_lane - lane == 1 )
+              {
+                // blocked by car in right lane
+                on_right |= car_s - 10 < check_car_s && car_s + 30 > check_car_s;
               }
             }
 
-            if(too_close)
+            const double SPEED_LIMIT = 49.5;
+            if (too_close)
             {
-              ref_vel -= .224;
+              if ( !on_left && (lane == 2 || lane == 1))
+              {
+                // Pass on left if possible
+                lane--;
+              }
+              else if ( !on_right && (lane == 1 || lane == 0)  )
+              {
+                // If can't pass on left, pass on right if possible
+                lane++;
+              }
+              // Max break if close to collision
+              else if (way_too_close)
+              {
+                ref_vel -= .224;
+              // less break otherwise, unless already going far less than speed limit
+              }
+              else if ( ref_vel > .6 * SPEED_LIMIT)
+              {
+                // decelerate
+                ref_vel -= .18;
+              }
             }
-            else if(ref_vel < 49.5)
+            else if (ref_vel < SPEED_LIMIT)
             {
               ref_vel += .224;
             }
+
 
           	json msgJson;
 
@@ -370,7 +423,7 @@ int main() {
               next_y_vals.push_back(previous_path_y[i]);
             }
             // Calculate how to break up spline points so that we travel at our desired reference velocity
-            double target_x = 30.0;
+            double target_x = 35.0;
             double target_y = s(target_x);
             double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 
