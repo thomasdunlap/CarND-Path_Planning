@@ -261,23 +261,28 @@ int main() {
             //find ref_v to use
             for(int i=0; i < sensor_fusion.size(); i++)
             {
+              // nearest car
               float d = sensor_fusion[i][6];
 
-                // is it on the same lane we are
+
               if ( d > 0 && d < 4 )
               {
+                //car in left lane
                 blocked_lane = 0;
               }
               else if ( d > 4 && d < 8 )
               {
+                //car in middle lane
                 blocked_lane = 1;
               }
               else if ( d > 8 && d < 12 )
               {
+                //car in right lane
                 blocked_lane = 2;
               }
               else
               {
+                //no other cars
                 blocked_lane = -1;
               }
 
@@ -289,9 +294,9 @@ int main() {
               check_car_s += ((double)prev_size*.02*check_speed);
 
               //check s values greater than mine and s gap
-              if ( blocked_lane == lane )
+              if (blocked_lane == lane )
               {
-                // Car in our lane.
+                // approaching car in current lane
                 getting_close |= check_car_s > car_s && check_car_s - car_s < 40;
                 too_close |= check_car_s > car_s && check_car_s - car_s < 30;
                 way_too_close |= check_car_s > car_s && check_car_s - car_s < 20;
@@ -311,9 +316,10 @@ int main() {
             const double SPEED_LIMIT = 49.5;
             if (too_close)
             {
+              // I did 'or' to hopefully stop car from getting confused and ending up in the middle of two lanes (e.g. lane=0.5)
               if ( !on_left && (lane == 2 || lane == 1))
               {
-                // Pass on left if possible
+                // Pass on left if not in left lane
                 lane--;
               }
               else if ( !on_right && (lane == 1 || lane == 0)  )
@@ -321,7 +327,7 @@ int main() {
                 // If can't pass on left, pass on right if possible
                 lane++;
               }
-              // Max break if close to collision
+              // max break if close to collision
               else if (way_too_close)
               {
                 ref_vel -= .224;
@@ -329,20 +335,19 @@ int main() {
               }
               else if ( ref_vel > .6 * SPEED_LIMIT)
               {
-                // decelerate
+                // decelerate if a approaching car at high speed
                 ref_vel -= .18;
               }
             }
             else if (ref_vel < SPEED_LIMIT)
             {
+              // accelerate if open road and under speed limit
               ref_vel += .224;
             }
 
 
           	json msgJson;
 
-          	//vector<double> next_x_vals;
-          	//vector<double> next_y_vals;
 
 
             std::vector<double> ptsx;
@@ -450,16 +455,10 @@ int main() {
                   x_point += ref_x;
                   y_point += ref_y;
 
-                  //double next_s = car_s+(i+1)*dist_inc;
-                  //double next_d = 10;
-                  //std::vector<double> xy = getXY(next_s, next_d, map_waypoints_s,  map_waypoints_x, map_waypoints_y);
 
                   next_x_vals.push_back(x_point);
                   next_y_vals.push_back(y_point);
-                  //next_x_vals.push_back(xy[0]);
-                  //next_y_vals.push_back(xy[1]);
-                  //next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-                  //next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
+
             }
 
             msgJson["next_x"] = next_x_vals;
